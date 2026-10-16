@@ -1,0 +1,468 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>When Does Unsupervised Learning Succeed or Fail?</title>
+<meta name="description" content="A PoS perspective on reconstruction-based anomaly detection: join blindness and meet preference, Dynamic Push and Pull, and nested manifold carving.">
+<meta property="og:type" content="website">
+<meta property="og:title" content="When Does Unsupervised Learning Succeed or Fail? A PoS Perspective on Reconstruction-Based Anomaly Detection">
+<meta property="og:description" content="Reconstruction fails in two opposite ways. Dynamic Push and Pull and nested manifold carving learn the compact nominal union instead.">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%232563a6'/%3E%3Cpath d='M6 22 L16 9 L26 22 Z' fill='none' stroke='white' stroke-width='2.4' stroke-linejoin='round'/%3E%3Ccircle cx='16' cy='18' r='2.6' fill='white'/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css">
+<link rel="stylesheet" href="style.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js"></script>
+<script defer src="main.js"></script>
+</head>
+<body>
+<a class="skip" href="#main">Skip to content</a>
+
+<nav class="top-nav" aria-label="Page navigation">
+  <div class="nav-inner">
+    <a class="nav-name" href="#top">PoS Anomaly Detection</a>
+    <div class="nav-links">
+      <a href="#failures">Failures</a>
+      <a href="#method">Method</a>
+      <a href="#benchmarks">Benchmarks</a>
+      <a href="#degradations">Images</a>
+      <a href="#ecg">ECG</a>
+      <a href="#code">Code</a>
+    </div>
+  </div>
+</nav>
+
+<header class="masthead" id="top">
+  <h1>When Does Unsupervised Learning Succeed or Fail?<span class="subtitle">A PoS Perspective on Reconstruction-Based Anomaly Detection</span></h1>
+  <div class="authors">
+    <span>Mehmet Yamaç<sup>1</sup></span>
+    <span>Yagmur Mustu<sup>1</sup></span>
+    <span>Muhammad Numan Yousaf<sup>1</sup></span>
+    <span>Lei Xu<sup>1</sup></span>
+    <span>Marcel van Gerven<sup>2</sup></span>
+  </div>
+  <p class="affiliations"><sup>1</sup> Tampere University <span></span><sup>2</sup> Radboud University</p>
+  <div class="resource-links">
+    <a class="resource primary" href="https://arxiv.org/abs/2609.28832" target="_blank" rel="noopener">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m5 4 14 16M19 4 5 20"/></svg><span>arXiv</span></a>
+    <a class="resource primary" href="https://arxiv.org/pdf/2609.28832" target="_blank" rel="noopener">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8Z"/><path d="M14 2v6h6M8 13h8M8 17h6"/></svg><span>PDF</span></a>
+    <a class="resource primary" href="https://github.com/ArtificialBrainStudio/PoS-Toolbox" target="_blank" rel="noopener">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m8 6-6 6 6 6M16 6l6 6-6 6M14 3l-4 18"/></svg><span>Code</span></a>
+    <a class="resource primary" href="https://tuni-my.sharepoint.com/:f:/g/personal/numan_yousaf_tuni_fi/IgBrHejVo_O-QLy7z-dV1Pw0ASE_pq5Pfmn-IfIezbq-9KA?e=RmOS79" target="_blank" rel="noopener">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v12M7 10l5 5 5-5M4 19h16"/></svg><span>Checkpoints</span></a>
+    <a class="resource" href="https://arxiv.org/abs/2605.20534" target="_blank" rel="noopener">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 19V5a2 2 0 0 1 2-2h13v16H6a2 2 0 0 0-2 2Zm0 0a2 2 0 0 0 2 2h13"/></svg><span>PoS framework paper</span></a>
+  </div>
+</header>
+
+<main id="main">
+
+<section class="hero">
+  <figure class="paper-figure teaser">
+    <div class="toy-grid">
+      <a class="figure-link toy-panel" href="assets/fig/toy_a.webp" data-lightbox>
+        <img src="assets/fig/toy_a.webp" width="776" height="831" alt="A linear network whose range is the join detects anomalies outside the join.">
+        <span class="toy-tag">(a) Join · anomaly outside <span class="m">\(\mathcal V\)</span> caught</span></a>
+      <a class="figure-link toy-panel" href="assets/fig/toy_b.webp" data-lightbox>
+        <img src="assets/fig/toy_b.webp" width="776" height="831" alt="The same linear range reconstructs anomalies inside the join with almost no error.">
+        <span class="toy-tag bad">(b) Join · anomaly inside <span class="m">\(\mathcal V\)</span> missed</span></a>
+      <a class="figure-link toy-panel" href="assets/fig/toy_c.webp" data-lightbox>
+        <img src="assets/fig/toy_c.webp" width="776" height="831" alt="A nonlinear network learns the compact union and gives anomalies large errors both inside and outside the join.">
+        <span class="toy-tag good">(c) Compact union <span class="m">\(\mathcal U\)</span> · both caught</span></a>
+      <a class="figure-link toy-panel" href="assets/fig/toy_d.webp" data-lightbox>
+        <img src="assets/fig/toy_d.webp" width="776" height="831" alt="A rank-deficient model learns a low-dimensional compromise that reconstructs nominal and anomalous points poorly.">
+        <span class="toy-tag bad">(d) Under-capacity · fidelity lost</span></a>
+    </div>
+    <ul class="toy-legend" aria-label="Legend">
+      <li><span class="dot" style="--c:#5b8fbd"></span>Nominal input</li>
+      <li><span class="dot" style="--c:#8fd0f5"></span>Nominal reconstruction</li>
+      <li><span class="dot" style="--c:#b8902a"></span>Anomaly input</li>
+      <li><span class="dot" style="--c:#f6d31b"></span>Anomaly reconstruction</li>
+      <li><span class="dash"></span>Reconstruction error</li>
+    </ul>
+    <figcaption>Toy geometry of successful and failed anomaly detection. The shaded plane is the join <span class="m">\(\mathcal V\)</span> of two nominal subspaces. Click any panel to enlarge.</figcaption>
+  </figure>
+
+  <section class="project-abstract" aria-labelledby="abstract-heading">
+    <h2 id="abstract-heading">Abstract</h2>
+    <p>Reconstruction-based unsupervised learning can fail in two opposing ways: a model may reconstruct anomalies too accurately or discard valid nominal variation. Using the Pursuit of Subspaces hypothesis, we characterize these failures through the meet, union, and join geometries induced by the nominal components. Excess learned range produces join blindness, while insufficient capacity produces meet preference and loss of nominal fidelity. We show that the compact nominal union is optimal among nominal faithful ranges and generally requires a nonlinear reconstruction map. Based on this geometry, we introduce Dynamic Push and Pull, which learns from controlled perturbations without anomaly labels, and nested manifold carving, which applies the same principle recursively in latent space. Experiments confirm the predicted changes in latent geometry across every tested Push and Pull configuration. The proposed methods improve reconstruction-based anomaly detection across standard benchmarks and unseen image degradations, while also improving pretrained ECG representations for downstream classification. These results connect reconstruction failures to identifiable geometric conditions and provide practical mechanisms for learning compact representations.</p>
+  </section>
+
+  <div class="stat-row" role="list">
+    <div class="stat" role="listitem"><span class="stat-value">0.941</span><span class="stat-label">mean ROC-AUC over 16 image-degradation settings<br><small>plain AE 0.504 · SD-VAE 0.452</small></span></div>
+    <div class="stat" role="listitem"><span class="stat-value">70.77%</span><span class="stat-label">Arrhythmia F1<br><small>strongest baseline 60.00%</small></span></div>
+    <div class="stat" role="listitem"><span class="stat-value">16 / 16</span><span class="stat-label">Push and Pull configurations show both predicted latent dynamics<br><small>plain AE: 7 / 16</small></span></div>
+  </div>
+</section>
+
+<section class="content-section" id="background">
+  <p class="eyebrow">Background</p>
+  <h2>Pursuit of Subspaces, in four postulates</h2>
+  <p>This work builds on the <a href="https://arxiv.org/abs/2605.20534" target="_blank" rel="noopener">Pursuit of Subspaces (PoS)</a> hypothesis, a postulate-based geometric account of representation learning. Its four idealized, falsifiable postulates describe what a well-trained encoder–decoder module should do:</p>
+  <ol class="postulates">
+    <li><strong>P1 · Geometric compaction.</strong> Learning refines a candidate data manifold into a structured target: a union of lower-dimensional component manifolds <span class="m">\(\mathcal M=\bigcup_i \mathcal M_{D_i}\)</span>.</li>
+    <li><strong>P2 · Nonlinear orthogonal projection.</strong> The module acts as an idempotent projector <span class="m">\(P_{\mathcal M}=f_D\circ f_E\)</span> onto <span class="m">\(\mathcal M\)</span>, so <span class="m">\(P_{\mathcal M}^2=P_{\mathcal M}\)</span>.</li>
+    <li><strong>P3 · Normal-space removal.</strong> The projection removes a normal-space component, <span class="m">\(\hat s=s-P^{\perp}_{\mathcal M}(s)\)</span>. The identity path keeps <span class="m">\(s\)</span> and the residual branch estimates what to remove.</li>
+    <li><strong>P4 · Nested projections through depth.</strong> P1–P3 repeat at every level, so depth gives a hierarchy of progressively refined nonlinear projections.</li>
+  </ol>
+  <p>PoS explains how an established projection is preserved when a network grows. This paper asks the open question that comes before it: <em>which learning mechanisms push a module toward nonlinear orthogonal projection onto a compact union of submanifolds in the first place?</em></p>
+</section>
+
+<section class="content-section" id="failures">
+  <p class="eyebrow">Theory</p>
+  <h2>Reconstruction fails in two opposite ways</h2>
+  <p>Locally, describe the nominal components by tangent subspaces <span class="m">\(S_i\)</span>. Three objects follow from them: the <strong>meet</strong> <span class="m">\(\mathcal W=\bigcap_i S_i\)</span> (directions every component shares), the <strong>union</strong> <span class="m">\(\mathcal U=\bigcup_i S_i\)</span> (the nominal data itself), and the <strong>join</strong> <span class="m">\(\mathcal V=\sum_i S_i\)</span> (the smallest linear space containing them all). Because <span class="m">\(\mathcal W\subseteq\mathcal U\subseteq\mathcal V\)</span>, set inclusion reverses distance:</p>
+  <div class="equation">\[\operatorname{dist}(s,\mathcal V)\;\le\;\operatorname{dist}(s,\mathcal U)\;\le\;\operatorname{dist}(s,\mathcal W).\]</div>
+
+  <div class="failure-cards">
+    <article class="card">
+      <h3>Prediction I · Join blindness</h3>
+      <p>A reconstruction loss constrains the model on nominal samples only. Nothing stops the learned range from expanding toward the join <span class="m">\(\mathcal V\)</span>. An anomaly in <span class="m">\(\mathcal V\setminus\mathcal U\)</span> is then reconstructed almost perfectly and goes undetected (panel b). The model loses <strong>selectivity</strong>.</p>
+      <p class="card-foot">Too much range → false negatives</p>
+    </article>
+    <article class="card">
+      <h3>Prediction II · Meet preference</h3>
+      <p>With limited capacity, a model preferentially keeps the shared directions <span class="m">\(\mathcal W\)</span> and drops component-specific ones. Nominal points in <span class="m">\(\mathcal U\setminus\mathcal W\)</span> now get positive errors (panel d). The model loses <strong>fidelity</strong>.</p>
+      <p class="card-foot">Too little range → false positives</p>
+    </article>
+  </div>
+
+  <h3>The target is the compact union, and it needs nonlinearity</h3>
+  <p>Among all ranges that keep nominal data intact, the compact union <span class="m">\(\mathcal U\)</span> maximizes the separation between nominal and anomalous scores. But a linear map whose range contains <span class="m">\(\mathcal U\)</span> must contain the whole join <span class="m">\(\mathcal V\)</span>. Reconstruction alone also never steers the range toward <span class="m">\(\mathcal U\)</span>. Learning the compact union therefore takes two ingredients: <strong>nonlinearity</strong> and an <strong>explicit separation signal</strong> (panel c). The two methods below supply that signal.</p>
+</section>
+
+<section class="content-section" id="method">
+  <p class="eyebrow">Method</p>
+  <h2>Dynamic Push and Pull</h2>
+  <p>Take a nominal sample <span class="m">\(s_n\)</span>, perturb it to <span class="m">\(\tilde s_n=s_n+e\)</span>, and reconstruct <span class="m">\(\hat s_n=P_\theta(\tilde s_n)\)</span>. The reconstruction is <em>pulled</em> toward the clean sample and <em>pushed</em> away from the perturbed input by a margin that scales with the perturbation's size <span class="m">\(\delta_e=d(\tilde s_n,s_n)\)</span>:</p>
+  <div class="equation">\[\mathcal L_{\mathrm{PP}}(\theta;s_n,e)=\underbrace{d(\hat s_n,s_n)}_{\text{pull}}+\underbrace{\big[\alpha\,\delta_e-d(\hat s_n,\tilde s_n)\big]_+}_{\text{push}},\qquad \alpha>0.\]</div>
+  <p>Training keeps the ordinary reconstruction loss on clean nominal samples and adds this term: <span class="m">\(\mathcal L_{\text{train}}=\mathcal L_{\text{AE}}+\lambda_{\text{PP}}\,\mathbb E[\mathcal L_{\text{PP}}]\)</span>. No anomaly examples or class labels are used. With <span class="m">\(\alpha=0\)</span> the push vanishes and the objective reduces to a denoising autoencoder. The push hinge is what carves away the excess range behind join blindness.</p>
+  <div class="split">
+    <figure class="paper-figure narrow">
+      <a class="figure-link" href="assets/fig/push_pull_geometry.webp" data-lightbox><img loading="lazy" src="assets/fig/push_pull_geometry.webp" width="1336" height="571" alt="Two regimes of the push-pull lemma. (a) The nominal sample lies on the union and the reconstruction coincides with it. (b) The nominal sample lies off the union, so margins above 1 become admissible."></a>
+    </figure>
+    <div class="split-text">
+      <p><strong>(a)</strong> If <span class="m">\(s_n\in\mathcal U\)</span> and <span class="m">\(e\)</span> is normal to <span class="m">\(\mathcal U\)</span>, exact pull gives <span class="m">\(\hat s_n=s_n\)</span>. For <span class="m">\(\alpha\le 1\)</span> the push is inactive at this optimum but supplies a gradient whenever its margin is violated.</p>
+      <p><strong>(b)</strong> If <span class="m">\(s_n\)</span> sits a distance <span class="m">\(\eta>0\)</span> off the union, margins <span class="m">\(\alpha>1\)</span> become admissible and impose a constraint pull alone cannot.</p>
+    </div>
+  </div>
+  <p class="caption">The guarantee is local to the sampled perturbations. To suppress join blindness across <span class="m">\(\mathcal V\setminus\mathcal U\)</span>, the perturbation sampler has to probe that region.</p>
+
+  <h2 class="h2-follow">Nested manifold carving</h2>
+  <p>Following P4, push–pull is applied again, this time in latent space. The Stage-0 encoder and decoder are frozen. A new encoder–decoder pair is trained on the Stage-0 latent with the same objective, and its output is decoded back through the frozen decoder. Each level carves the range it inherits, while the pull term keeps nominal coverage. Under the paper's ideal conditions the ranges shrink monotonically onto the union: <span class="m">\(\overline T^{(1)}\supseteq\overline T^{(2)}\supseteq\cdots\supseteq\mathcal U\)</span>.</p>
+
+  <figure class="stepper" data-stepper aria-label="Nested manifold carving on MNIST, step by step">
+    <div class="stepper-stage">
+      <img class="stepper-img" src="assets/fig/stage_1.webp" width="538" height="533" alt="">
+    </div>
+    <div class="stepper-words">
+      <button type="button" class="beat" data-img="assets/fig/stage_1.webp" data-alt="Stage 0: digit 8 points out of the learned plane V; nominal digits 5 and 7 lie in it." aria-pressed="true">
+        <span class="beat-n">1</span><span class="beat-title">Stage 0 learns a coarse range</span>
+        <span class="beat-line">Nominal digits 4, 5 and 7 define a compact union inside a coarser learned range <span class="m">\(\mathcal V\)</span>. Digit 8 points out of <span class="m">\(\mathcal V\)</span>.</span></button>
+      <button type="button" class="beat" data-img="assets/fig/stage_2.webp" data-alt="Stage 0: digit 8 is projected onto V near digit 5, leaving a large error; digit 1 lies inside V." aria-pressed="false">
+        <span class="beat-n">2</span><span class="beat-title">Outside anomalies are caught, inside ones slip through</span>
+        <span class="beat-line">Digit 8 is projected onto <span class="m">\(\mathcal V\)</span> with a large pixel error, so Stage 0 catches it. Digit 1 lies <em>inside</em> <span class="m">\(\mathcal V\setminus\mathcal U\)</span>, reconstructs well, and is missed. This is join blindness.</span></button>
+      <button type="button" class="beat" data-img="assets/fig/stage_3.webp" data-alt="Stage 1 in input space: digit 1 is pulled toward digit 7." aria-pressed="false">
+        <span class="beat-n">3</span><span class="beat-title">Stage 1 carves inside the range</span>
+        <span class="beat-line">A second encoder–decoder pair, trained with push–pull in the frozen Stage-0 latent space, projects off-union points such as 1 toward a nearby nominal component (here 7).</span></button>
+      <button type="button" class="beat" data-img="assets/fig/stage_4.webp" data-alt="Stage 1 latent space: the representation of digit 1 moves onto the direction of digit 7." aria-pressed="false">
+        <span class="beat-n">4</span><span class="beat-title">The latent error exposes it</span>
+        <span class="beat-line">In the latent space <span class="m">\(x\in\mathbb R^N\)</span>, the move from 1 toward 7 is a large latent error, so the anomaly Stage 0 missed is now detected. Information Stage 0 already removed (the 8) cannot be recovered here, which makes the two stages complementary.</span></button>
+    </div>
+  </figure>
+  <p class="caption">Geometric reading of the two-stage MNIST experiment with nominal digits {4, 5, 7}. Click a step, or use the arrow keys when a step is focused.</p>
+</section>
+
+<section class="content-section" id="predictions">
+  <p class="eyebrow">Predict, then measure</p>
+  <h2>The predicted geometry shows up in the data</h2>
+  <h3>Different stages catch different anomalies</h3>
+  <p>The paper's controlled MNIST study (nominal digits 4, 5, 7) does what the figure above predicts. Digit 8 produces a <em>large image error</em> but a small Stage-1 latent error: Stage 0 already removed its anomalous direction. Digit 1 produces a <em>small image error</em> but a large latent error: it survived Stage 0 inside <span class="m">\(\mathcal V\setminus\mathcal U\)</span> and nested carving exposed it. Its Stage-1 reconstructions turn predominantly 7-like.</p>
+  <figure class="paper-figure narrow-md">
+    <a class="figure-link" href="assets/fig/digit_projection.webp" data-lightbox><img loading="lazy" src="assets/fig/digit_projection.webp" width="1487" height="548" alt="Original, Stage 0 and Stage 1 reconstructions. Digit 8 becomes 5-like at Stage 0. Digit 1 survives Stage 0 and becomes 7-like at Stage 1."></a>
+  </figure>
+  <p class="caption">Representative reconstructions at successive stages. Left: 8 is mapped toward 5 at Stage 0 and stays there. Right: 1 survives Stage 0 and is projected toward 7 by nested carving.</p>
+
+  <div class="two-col">
+    <div>
+      <h3>Push and Pull, not capacity, drives the gain</h3>
+      <div class="table-scroll" tabindex="0" aria-label="Controlled MNIST study">
+        <table>
+          <thead><tr><th>Configuration</th><th>F1</th><th>ROC-AUC</th><th>PR-AUC</th></tr></thead>
+          <tbody>
+            <tr><td>Bouman–Heskes baseline</td><td>0.693</td><td>0.866</td><td>0.936</td></tr>
+            <tr><td>Higher-capacity AE</td><td>0.780</td><td>0.893</td><td>0.962</td></tr>
+            <tr><td>AE + mask</td><td>0.766</td><td>0.881</td><td>0.957</td></tr>
+            <tr><td>AE + PP</td><td>0.792</td><td>0.897</td><td>0.963</td></tr>
+            <tr><td>AE + nested + PP</td><td>0.798</td><td>0.909</td><td>0.967</td></tr>
+            <tr><td>AE + nested + PP + sparsity</td><td>0.808</td><td>0.928</td><td>0.972</td></tr>
+            <tr class="ours"><td>AE + nested + PP + mask + sparsity</td><td><strong>0.815</strong></td><td><strong>0.929</strong></td><td><strong>0.973</strong></td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p class="caption">Nominal digits {4, 5, 7}. The baseline reproduces Bouman &amp; Heskes with a 2-D bottleneck. All other rows use a 9-D Stage-0 latent. A reconstruction-only nested module adds nothing because it admits an identity solution. Push and Pull supplies the separation signal that makes nesting useful.</p>
+    </div>
+    <div>
+      <h3>Latent dynamics match PoS in every PP run</h3>
+      <p>Moving to a more compact representation, PoS predicts that nominal components separate (their radii shrink faster than the distances between their centres) and that off-union anomalies move toward the nominal union. Across 4 nominal-digit sets × 2 masking × 2 sparsity choices:</p>
+      <div class="table-scroll" tabindex="0" aria-label="Observed representation dynamics">
+        <table>
+          <thead><tr><th>Predicted change</th><th>AE</th><th>AE + PP</th></tr></thead>
+          <tbody>
+            <tr><td>Nominal relative separation increases, <span class="m">\(\Delta S&gt;0\)</span></td><td>7 / 16</td><td><strong>16 / 16</strong></td></tr>
+            <tr><td>All four anomaly-proximity indicators decrease</td><td>14 / 16</td><td><strong>16 / 16</strong></td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p class="caption">A side effect PoS also predicts: as nominal structure tightens and anomalies are pulled toward it, a more compact network can give <em>worse</em> features to a downstream classifier that must separate the two.</p>
+    </div>
+  </div>
+</section>
+
+<section class="content-section" id="benchmarks">
+  <p class="eyebrow">Results</p>
+  <h2>Standard one-class anomaly detection</h2>
+  <p>We train on nominal samples only and follow the TOLL validation protocol. All three arms share TOLL's Stage-0 autoencoder and optimization settings. <strong>AE</strong> is that backbone trained for reconstruction only (compactness coefficient <span class="m">\(\beta=0\)</span>). <strong>AE-PP</strong> adds Dynamic Push and Pull. <strong>AE-PoS</strong> adds nested manifold carving on the frozen AE-PP Stage 0. Scores are mean ± std over 10 seeds and every nominal class.</p>
+
+  <div class="table-scroll" tabindex="0" aria-label="AE, AE-PP and AE-PoS on the one-class benchmarks">
+    <table class="headline">
+      <thead><tr><th>Dataset</th><th>Metric</th><th>AE</th><th>AE-PP</th><th>AE-PoS</th><th>Gain over AE</th></tr></thead>
+      <tbody>
+        <tr><td>MNIST</td><td>AUC-ROC</td><td>94.74 ± 4.65</td><td><strong>99.38 ± 0.42</strong></td><td>99.35 ± 0.51</td><td class="gain">+4.64</td></tr>
+        <tr><td>Fashion-MNIST</td><td>AUC-ROC</td><td>91.60 ± 5.34</td><td>94.83 ± 3.95</td><td><strong>94.87 ± 4.04</strong></td><td class="gain">+3.27</td></tr>
+        <tr><td>CIFAR-10</td><td>AUC-ROC</td><td>68.96 ± 7.29</td><td>71.30 ± 6.70</td><td><strong>71.73 ± 6.60</strong></td><td class="gain">+2.77</td></tr>
+        <tr><td>CIFAR-100</td><td>AUC-ROC</td><td>65.42 ± 9.09</td><td>68.56 ± 8.89</td><td><strong>68.87 ± 8.97</strong></td><td class="gain">+3.45</td></tr>
+        <tr><td>Arrhythmia</td><td>F1</td><td>60.77 ± 7.26</td><td>67.69 ± 5.75</td><td><strong>70.77 ± 5.75</strong></td><td class="gain">+10.00</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <p class="caption">Gain is best of ours minus AE, in percentage points. Stage 1 helps most when the Stage-0 representation still holds several components (Arrhythmia, CIFAR-10, multi-digit MNIST). It mostly preserves performance when Stage 0 is already compact (single-class MNIST, Fashion-MNIST).</p>
+
+  <h3>Against published baselines</h3>
+  <div class="chart-card" id="baseline-chart">
+    <div class="chart-head">
+      <div class="seg" role="tablist" aria-label="Benchmark">
+        <button type="button" role="tab" aria-selected="true" data-bench="cifar10">CIFAR-10 · AUC-ROC</button>
+        <button type="button" role="tab" aria-selected="false" data-bench="arrhythmia">Arrhythmia · F1</button>
+      </div>
+      <ul class="legend"><li><span class="sw" style="--c:var(--ours)"></span>Ours</li><li><span class="sw" style="--c:var(--context)"></span>Published baselines</li></ul>
+    </div>
+    <div class="chart-body" data-chart></div>
+    <p class="chart-note" data-note></p>
+  </div>
+
+  <h3>The push margin <span class="m">\(\alpha\)</span> saturates, as predicted</h3>
+  <p>Once the push hinge is active for most training pairs, its gradient no longer depends on <span class="m">\(\alpha\)</span>, so performance should plateau. It does, at <span class="m">\(\alpha=2\)</span> or <span class="m">\(3\)</span>, on all five datasets. <span class="m">\(\alpha=0\)</span> keeps pull and disables push (a denoising AE).</p>
+  <div class="chart-card" id="alpha-chart">
+    <div class="chart-head">
+      <ul class="legend"><li><span class="ln"></span>AE-PP (Stage 0)</li><li><span class="ln ref"></span>AE baseline</li><li><span class="ring"></span>α selected on validation</li></ul>
+    </div>
+    <div class="multiples" data-chart></div>
+  </div>
+  <details class="table-view">
+    <summary>Show α sweep as a table</summary>
+    <div class="table-scroll" tabindex="0"><table data-alpha-table></table></div>
+  </details>
+</section>
+
+<section class="content-section" id="degradations">
+  <p class="eyebrow">Results</p>
+  <h2>Detecting unseen image degradations</h2>
+  <p>Here the task is nominal-only and real-world: learn a high-fidelity model of clean, high-quality images, then flag degraded ones it has never seen. Training perturbations are limited to parametric blur kernels, sensor noise, resampling and JPEG. Realistic motion blur (REDS, GoPro), rain and underwater degradations appear only at test time. Kodak24 Gaussian noise is an in-family control.</p>
+
+  <div class="chart-card" id="family-chart">
+    <div class="chart-head">
+      <div class="seg" role="tablist" aria-label="Metric">
+        <button type="button" role="tab" aria-selected="true" data-metric="roc">ROC-AUC</button>
+        <button type="button" role="tab" aria-selected="false" data-metric="pr">PR-AUC</button>
+      </div>
+      <ul class="legend" data-legend></ul>
+    </div>
+    <div class="chart-body" data-chart></div>
+    <p class="chart-note">Unweighted mean over the settings in each family (count in parentheses). Parameters: AE 0.83M, SD-VAE 83.7M, AE-PP 0.83M, AE-PoS 1.67M. The hairline at 0.5 is chance.</p>
+  </div>
+  <details class="table-view">
+    <summary>Show as a table</summary>
+    <div class="table-scroll" tabindex="0"><table data-family-table></table></div>
+  </details>
+
+  <h3>Why the VAE goes below chance: it reconstructs blur <em>better</em> than clean images</h3>
+  <p>The pretrained SD-VAE regularizes its latent probabilistically, which costs fidelity on clean images and favours low-frequency content. Under strong blur its reconstruction gets <em>more</em> accurate, so blurred anomalies score lower than clean images and the score ordering flips. AE-PoS keeps nominal detail and excludes blur from its target set, so the residual grows with blur. Drag the slider to compare.</p>
+
+  <div class="blur-demo" id="blur-demo">
+    <div class="blur-controls">
+      <label for="blur-range">REDS blur strength <output id="blur-out">0.2</output></label>
+      <input id="blur-range" type="range" min="0" max="4" step="1" value="0" list="blur-ticks" aria-valuetext="0.2">
+      <datalist id="blur-ticks"><option value="0" label="0.2"></option><option value="1" label="0.4"></option><option value="2" label="0.6"></option><option value="3" label="0.8"></option><option value="4" label="1.0"></option></datalist>
+      <div class="ticks" aria-hidden="true"><span>0.2</span><span>0.4</span><span>0.6</span><span>0.8</span><span>1.0</span></div>
+      <div class="seg small" role="group" aria-label="Show">
+        <button type="button" aria-pressed="false" data-view="out">Reconstruction</button>
+        <button type="button" aria-pressed="true" data-view="res">Residual</button>
+      </div>
+    </div>
+    <div class="blur-grid">
+      <figure class="tile"><img data-role="in" alt="Blurred REDS input"><figcaption>Input <b>blurred</b></figcaption></figure>
+      <figure class="tile"><img data-role="ae" alt="AE output"><figcaption>AE <b data-psnr="ae"></b></figcaption></figure>
+      <figure class="tile"><img data-role="vae" alt="VAE output"><figcaption>SD-VAE <b data-psnr="vae"></b></figcaption></figure>
+      <figure class="tile"><img data-role="aepos" alt="AE-PoS output"><figcaption>AE-PoS <b data-psnr="aepos"></b></figcaption></figure>
+    </div>
+    <div class="psnr-chart" data-chart aria-label="Reconstruction PSNR versus blur strength"></div>
+    <p class="chart-note">One REDS scene. PSNR is between the input and its reconstruction (higher means the model represents the input better). Clean-image PSNRs for the same scene: AE 62.4, SD-VAE 27.6, AE-PoS 43.9 dB. All residuals share one intensity gain, so the AE residual is near-black: it reproduces the blur almost exactly.</p>
+  </div>
+
+  <div class="two-col tight">
+    <div>
+      <div class="table-scroll" tabindex="0" aria-label="Reconstruction PSNR under the strongest REDS blur">
+        <table>
+          <thead><tr><th>PSNR (dB)</th><th>AE</th><th>SD-VAE</th><th>AE-PP</th><th>AE-PoS</th></tr></thead>
+          <tbody>
+            <tr><td>Clean</td><td>63.04</td><td>27.59</td><td>43.42</td><td>43.07</td></tr>
+            <tr><td>Blur 1.0</td><td>62.72</td><td>37.01</td><td>30.51</td><td>31.79</td></tr>
+            <tr><td>Δ</td><td>−0.32</td><td><strong class="warn">+9.42</strong></td><td>−12.91</td><td>−11.28</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p class="caption">Averaged over the REDS set at the strongest blur. The VAE is the only model whose reconstruction improves under blur, which explains its ROC-AUC below 0.5.</p>
+    </div>
+    <div>
+      <p><strong>The plain AE has the opposite problem.</strong> It reconstructs clean <em>and</em> degraded inputs at about 60 dB, so its residuals carry almost no signal. That is join blindness at image scale: high fidelity, no selectivity.</p>
+    </div>
+  </div>
+
+  <h3>Nominal fidelity and degradation rejection, side by side</h3>
+  <div class="viewer" id="example-viewer">
+    <div class="picker" role="tablist" aria-label="Example image">
+      <div class="picker-group" data-group="nominal"><span class="picker-label">Nominal</span><div class="picker-items"></div></div>
+      <div class="picker-group" data-group="degraded"><span class="picker-label">Degraded</span><div class="picker-items"></div></div>
+    </div>
+    <div class="viewer-body">
+      <div class="viewer-left">
+        <span class="row-label" aria-hidden="true">Input</span>
+        <figure class="tile viewer-input"><img data-role="in" alt=""><figcaption><span data-title></span><i data-kind></i></figcaption></figure>
+      </div>
+      <div class="viewer-models">
+        <span class="row-label" aria-hidden="true">Reconstruction</span>
+        <figure class="tile"><img data-role="out-ae" alt=""><figcaption>AE <b data-psnr="ae"></b></figcaption></figure>
+        <figure class="tile"><img data-role="out-vae" alt=""><figcaption>SD-VAE <b data-psnr="vae"></b></figcaption></figure>
+        <figure class="tile"><img data-role="out-aepos" alt=""><figcaption>AE-PoS <b data-psnr="aepos"></b></figcaption></figure>
+        <span class="row-label" aria-hidden="true">Residual</span>
+        <figure class="tile"><img data-role="res-ae" alt=""><figcaption>AE</figcaption></figure>
+        <figure class="tile"><img data-role="res-vae" alt=""><figcaption>SD-VAE</figcaption></figure>
+        <figure class="tile"><img data-role="res-aepos" alt=""><figcaption>AE-PoS</figcaption></figure>
+      </div>
+    </div>
+    <div class="viewer-foot">
+      <p class="goal" data-goal></p>
+      <p class="chart-note" data-caption></p>
+    </div>
+  </div>
+</section>
+
+<section class="content-section" id="ecg">
+  <p class="eyebrow">Beyond anomaly detection</p>
+  <h2>Transferable ECG representations</h2>
+  <p>Nested carving is a general unsupervised representation-learning strategy, not just an anomaly detector. Expert ECG labels are costly, but unlabelled recordings are plentiful. We pretrain on 164,972 unlabelled ECGs (Ningbo + CODE-15), freeze the encoder, and train only a <strong>linear</strong> diagnostic classifier on top. The Stage-1 inner autoencoder is trained on representations of the same pool, so it sees no extra data.</p>
+  <ol class="pipeline" aria-label="ECG pipeline">
+    <li class="io">Signal <span class="m">\(s\)</span></li>
+    <li class="frozen">Frozen encoder<small>ST-MEM d6 / w768</small></li>
+    <li class="latent">Latent <span class="m">\(x\)</span></li>
+    <li class="new">Inner autoencoder<small>Stage 1 · push–pull</small></li>
+    <li class="frozen">Outer decoder<small>ST-MEM d4 · fine-tuned</small></li>
+    <li class="io">Reconstruction</li>
+  </ol>
+  <div class="table-scroll" tabindex="0" aria-label="Frozen-encoder AUROC on ECG tasks">
+    <table>
+      <thead>
+        <tr><th rowspan="2">Encoder</th><th colspan="4" class="group">PTB-XL</th><th class="group">ICBEB</th></tr>
+        <tr><th>Super</th><th>Sub</th><th>Form</th><th>Rhythm</th><th>CPSC2018</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>ECG-CPC</td><td>0.8630</td><td>0.8860</td><td>0.8730</td><td>0.9380</td><td>0.9020</td></tr>
+        <tr><td>ECG-FM</td><td>0.8730</td><td>0.8660</td><td>0.7820</td><td>0.8650</td><td>0.9060</td></tr>
+        <tr><td>MERL</td><td>0.8870</td><td>0.8950</td><td>0.8640</td><td>0.8770</td><td>0.9140</td></tr>
+        <tr><td>ST-MEM</td><td>0.8954</td><td>0.8935</td><td>0.8548</td><td>0.9463</td><td>0.9559</td></tr>
+        <tr class="sep"><td>Stage 0 (ours)</td><td>0.8969</td><td>0.8917</td><td>0.8523</td><td>0.9449</td><td>0.9530</td></tr>
+        <tr class="ours"><td>Stage 1 (ours)</td><td><strong>0.9136</strong></td><td><strong>0.9277</strong></td><td><strong>0.8825</strong></td><td><strong>0.9482</strong></td><td><strong>0.9623</strong></td></tr>
+      </tbody>
+    </table>
+  </div>
+  <p class="caption">Frozen-encoder AUROC with a linear probe. Stage 0 and Stage 1 are depth-controlled. Nested carving improves all five tasks. These experiments evaluate representation learning and do not establish clinical diagnostic validity.</p>
+</section>
+
+<section class="content-section" id="code">
+  <p class="eyebrow">Reproduce</p>
+  <h2>Code, configs and checkpoints</h2>
+  <p>The <a href="https://github.com/ArtificialBrainStudio/PoS-Toolbox" target="_blank" rel="noopener">PoS Toolbox</a> builds networks from the <code>PoSModule</code> (pre-processing <code>Tin</code> → subspace → post-processing <code>Tout</code>, nestable to any depth). It ships the exact configs behind every table. Checkpoints include 1,530 one-class models (10 seeds × every nominal class) and the 3 image models. The image evaluation sets are on <a href="https://tuni-my.sharepoint.com/:f:/g/personal/numan_yousaf_tuni_fi/IgBrHejVo_O-QLy7z-dV1Pw0ASE_pq5Pfmn-IfIezbq-9KA?e=RmOS79" target="_blank" rel="noopener">OneDrive</a>.</p>
+  <div class="code-block">
+    <button type="button" class="copy" data-copy="#code-quick">Copy</button>
+<pre id="code-quick"><code>git clone https://github.com/ArtificialBrainStudio/PoS-Toolbox.git
+cd PoS-Toolbox &amp;&amp; pip install -e .
+
+# one-class data (downloads the public datasets)
+python tools/prepare_oneclass_data.py --out datasets/oneclass
+
+# one arm of a one-class table: 10 seeds x every nominal class, then mean ± std
+python tools/sweep.py configs/sweeps/ae_pp_cifar10.yml | xargs -P 4 -I{} bash -c '{}'
+python tools/aggregate.py --group ae_pp_cifar10
+
+# score one unseen-degradation setting with a released image checkpoint
+run=ae_pp_image python -m pos_toolbox.infer -opt configs/anomaly/gopro.yml</code></pre>
+  </div>
+  <div class="table-scroll" tabindex="0" aria-label="Experiment arms">
+    <table class="text">
+      <thead><tr><th>Arm</th><th>Meaning</th></tr></thead>
+      <tbody>
+        <tr><td><code>ae_&lt;dataset&gt;</code></td><td>reconstruction-only autoencoder</td></tr>
+        <tr><td><code>ae_pp_&lt;dataset&gt;</code></td><td>+ Dynamic Push and Pull</td></tr>
+        <tr><td><code>ae_pos_&lt;dataset&gt;</code></td><td>+ nested manifold carving (Stage 1 inside a frozen <code>ae_pp</code> Stage 0)</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <p>Full instructions: <a href="https://github.com/ArtificialBrainStudio/PoS-Toolbox/blob/main/docs/reproduce.md" target="_blank" rel="noopener">docs/reproduce.md</a>.</p>
+</section>
+
+<section class="content-section compact" id="citation">
+  <h2>Citation</h2>
+  <div class="code-block">
+    <button type="button" class="copy" data-copy="#bib-main">Copy</button>
+<pre id="bib-main"><code>@article{yamac2026pos,
+  title   = {When Does Unsupervised Learning Succeed or Fail? A PoS Perspective on
+             Reconstruction-Based Anomaly Detection},
+  author  = {Yama{\c{c}}, Mehmet and Mustu, Yagmur and Yousaf, Muhammad Numan and
+             Xu, Lei and van Gerven, Marcel},
+  journal = {arXiv preprint arXiv:2609.28832},
+  year    = {2026}
+}</code></pre>
+  </div>
+  <p class="cite-note">This work builds on the PoS framework:</p>
+  <div class="code-block">
+    <button type="button" class="copy" data-copy="#bib-pos">Copy</button>
+<pre id="bib-pos"><code>@article{yamac2026axiomatizing,
+  title   = {Axiomatizing Neural Networks via Pursuit of Subspaces},
+  author  = {Yama{\c{c}}, Mehmet and Duman, Mert and Akpinar, Ugur and Casadiego, Felix Rojas and
+             Kiranyaz, Serkan and van Gerven, Marcel and Gabbouj, Moncef},
+  journal = {arXiv preprint arXiv:2605.20534},
+  year    = {2026}
+}</code></pre>
+  </div>
+</section>
+
+</main>
+
+<footer>
+  <span>When Does Unsupervised Learning Succeed or Fail? · Code and checkpoints under CC BY-NC-SA 4.0</span>
+  <a href="#top">Back to top</a>
+</footer>
+
+<dialog id="figure-viewer" aria-label="Expanded figure">
+  <button type="button" class="close-viewer" aria-label="Close expanded figure">Close</button>
+  <img alt="">
+</dialog>
+<div class="tooltip" role="tooltip" hidden></div>
+</body>
+</html>
