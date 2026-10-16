@@ -51,8 +51,8 @@
       <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m5 4 14 16M19 4 5 20"/></svg><span>arXiv</span></a>
     <a class="resource primary" href="https://arxiv.org/pdf/2609.28832" target="_blank" rel="noopener">
       <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8Z"/><path d="M14 2v6h6M8 13h8M8 17h6"/></svg><span>PDF</span></a>
-    <a class="resource primary" href="https://github.com/ArtificialBrainStudio/PoS-Toolbox" target="_blank" rel="noopener">
-      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m8 6-6 6 6 6M16 6l6 6-6 6M14 3l-4 18"/></svg><span>Code</span></a>
+    <span class="resource soon" aria-disabled="true" title="The code repository will be public with the code release">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m8 6-6 6 6 6M16 6l6 6-6 6M14 3l-4 18"/></svg><span>Code<small>coming soon</small></span></span>
     <a class="resource primary" href="https://tuni-my.sharepoint.com/:f:/g/personal/numan_yousaf_tuni_fi/IgBrHejVo_O-QLy7z-dV1Pw0ASE_pq5Pfmn-IfIezbq-9KA?e=RmOS79" target="_blank" rel="noopener">
       <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v12M7 10l5 5 5-5M4 19h16"/></svg><span>Checkpoints</span></a>
     <a class="resource" href="https://arxiv.org/abs/2605.20534" target="_blank" rel="noopener">
@@ -397,7 +397,8 @@
 <section class="content-section" id="code">
   <p class="eyebrow">Reproduce</p>
   <h2>Code, configs and checkpoints</h2>
-  <p>The <a href="https://github.com/ArtificialBrainStudio/PoS-Toolbox" target="_blank" rel="noopener">PoS Toolbox</a> builds networks from the <code>PoSModule</code> (pre-processing <code>Tin</code> → subspace → post-processing <code>Tout</code>, nestable to any depth). It ships the exact configs behind every table. Checkpoints include 1,530 one-class models (10 seeds × every nominal class) and the 3 image models. The image evaluation sets are on <a href="https://tuni-my.sharepoint.com/:f:/g/personal/numan_yousaf_tuni_fi/IgBrHejVo_O-QLy7z-dV1Pw0ASE_pq5Pfmn-IfIezbq-9KA?e=RmOS79" target="_blank" rel="noopener">OneDrive</a>.</p>
+  <p class="notice">The code repository is not public yet; it will open with the code release. Checkpoints and evaluation images are already available on OneDrive.</p>
+  <p>The PoS Toolbox builds networks from the <code>PoSModule</code> (pre-processing <code>Tin</code> → subspace → post-processing <code>Tout</code>, nestable to any depth). It ships the exact configs behind every table. Checkpoints include 1,530 one-class models (10 seeds × every nominal class) and the 3 image models. The image evaluation sets are on <a href="https://tuni-my.sharepoint.com/:f:/g/personal/numan_yousaf_tuni_fi/IgBrHejVo_O-QLy7z-dV1Pw0ASE_pq5Pfmn-IfIezbq-9KA?e=RmOS79" target="_blank" rel="noopener">OneDrive</a>.</p>
   <div class="code-block">
     <button type="button" class="copy" data-copy="#code-quick">Copy</button>
 <pre id="code-quick"><code>git clone https://github.com/ArtificialBrainStudio/PoS-Toolbox.git
@@ -423,7 +424,7 @@ run=ae_pp_image python -m pos_toolbox.infer -opt configs/anomaly/gopro.yml</code
       </tbody>
     </table>
   </div>
-  <p>Full instructions: <a href="https://github.com/ArtificialBrainStudio/PoS-Toolbox/blob/main/docs/reproduce.md" target="_blank" rel="noopener">docs/reproduce.md</a>.</p>
+  <p>Full instructions are in <code>docs/reproduce.md</code> in the repository.</p>
 </section>
 
 <section class="content-section compact" id="citation">
